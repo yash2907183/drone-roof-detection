@@ -65,9 +65,11 @@ if uploaded_file is not None:
                         # Get annotated image
                         import cv2
                         annotated_img = results[0].plot()
-                        annotated_img_rgb = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
-                        annotated_pil = Image.fromarray(annotated_img_rgb)
-                        
+                        try:
+                            annotated_pil = Image.fromarray(annotated_img)
+                        except:
+                            annotated_img_rgb = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
+                            annotated_pil = Image.fromarray(annotated_img_rgb)
                         # Display results
                         st.image(annotated_pil, caption='Detection Results', use_column_width=True)
                         
