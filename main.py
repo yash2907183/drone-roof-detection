@@ -2,6 +2,9 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from io import BytesIO
 
 # Load model
 @st.cache_resource
@@ -64,38 +67,70 @@ if uploaded_file is not None:
         st.subheader("Detection Results")
         
         if st.button('🔍 Detect Objects', type="primary"):
-            with st.spinner('Analyzing image...'):
-                # Convert PIL to numpy array
-                image_np = np.array(image)
+    with st.spinner('Analyzing image...'):
+        # Convert PIL to numpy array
+        image_np = np.array(image)
+        
+        # Run inference with user-defined confidence
+        results = model(image_np, conf=confidence_threshold, verbose=False)
+        
+        # Create matplotlib figure with original image
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+        ax.imshow(image)  # Use original PIL image (preserves colors)
+        
+        # Extract detections and draw boxes manually
+        detections = []
+        if results[0].boxes is not None:
+            for box in results[0].boxes:
+                # Get box coordinates
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                width = x2 - x1
+                height = y2 - y1
                 
-                # Run inference with user-defined confidence
-                results = model(image_np, conf=confidence_threshold, verbose=False)
+                # Create rectangle (same style as YOLOv8)
+                rect = patches.Rectangle(
+                    (x1, y1), width, height,
+                    linewidth=3, edgecolor='magenta', facecolor='none'
+                )
+                ax.add_patch(rect)
                 
-                # Use YOLOv8's built-in save (handles colors correctly)
-                results[0].save('detection_result.jpg')
-
-                # Load and display the saved result
-                result_image = Image.open('detection_result.jpg')
-                st.image(result_image, caption='Detection Results', use_container_width=True)
+                # Add label with confidence
+                class_name = model.names[int(box.cls)]
+                confidence = float(box.conf)
+                ax.text(x1, y1-10, f'{class_name} {confidence:.2f}', 
+                        color='magenta', fontsize=12, weight='bold',
+                        bbox=dict(boxstyle="round,pad=0.3", facecolor="magenta", alpha=0.7))
                 
-                # Extract and display detection info
-                detections = []
-                if results[0].boxes is not None:
-                    for box in results[0].boxes:
-                        detection = {
-                            "class": model.names[int(box.cls)],
-                            "confidence": float(box.conf),
-                        }
-                        detections.append(detection)
-                
-                if detections:
-                    st.success(f"Found {len(detections)} objects!")
-                    for i, detection in enumerate(detections, 1):
-                        st.write(f"**{i}.** {detection['class']} - {detection['confidence']*100:.1f}% confidence")
-                else:
-                    st.info("No objects detected. Try lowering the confidence threshold.")
-                
-                st.balloons()
+                # Store detection info
+                detections.append({
+                    "class": class_name,
+                    "confidence": confidence,
+                })
+        
+        ax.axis('off')
+        ax.set_xlim(0, image.width)
+        ax.set_ylim(image.height, 0)  # Flip Y axis to match image coordinates
+        plt.tight_layout()
+        
+        # Convert matplotlib figure to image
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='white')
+        buf.seek(0)
+        result_image = Image.open(buf)
+        plt.close()
+        
+        # Display result
+        st.image(result_image, caption='Detection Results', use_container_width=True)
+        
+        # Show detection info
+        if detections:
+            st.success(f"Found {len(detections)} objects!")
+            for i, detection in enumerate(detections, 1):
+                st.write(f"**{i}.** {detection['class']} - {detection['confidence']*100:.1f}% confidence")
+        else:
+            st.info("No objects detected. Try lowering the confidence threshold.")
+        
+        st.balloons()
 
 # Instructions
 st.markdown("---")
