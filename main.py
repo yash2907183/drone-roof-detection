@@ -71,13 +71,12 @@ if uploaded_file is not None:
                 # Run inference with user-defined confidence
                 results = model(image_np, conf=confidence_threshold, verbose=False)
                 
-                # Get annotated image with proper color conversion
-                annotated_img = results[0].plot()
-                annotated_img_rgb = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
-                annotated_pil = Image.fromarray(annotated_img_rgb)
-                
-                # Display results
-                st.image(annotated_pil, caption='Detection Results', use_container_width=True)
+                # Use YOLOv8's built-in save (handles colors correctly)
+                results[0].save('detection_result.jpg')
+
+                # Load and display the saved result
+                result_image = Image.open('detection_result.jpg')
+                st.image(result_image, caption='Detection Results', use_container_width=True)
                 
                 # Extract and display detection info
                 detections = []
