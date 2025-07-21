@@ -68,68 +68,66 @@ if uploaded_file is not None:
         
         if st.button('🔍 Detect Objects', type="primary"):
             with st.spinner('Analyzing image...'):
-        # Convert PIL to numpy array
-            image_np = np.array(image)
+                image_np = np.array(image)
         
-        # Run inference with user-defined confidence
-            results = model(image_np, conf=confidence_threshold, verbose=False)
+                results = model(image_np, conf=confidence_threshold, verbose=False)
         
-        # Create matplotlib figure with original image
-            fig, ax = plt.subplots(1, 1, figsize=(10, 8))
-            ax.imshow(image)  # Use original PIL image (preserves colors)
+            # Create matplotlib figure with original image
+                fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+                ax.imshow(image)  # Use original PIL image (preserves colors)
         
-        # Extract detections and draw boxes manually
-            detections = []
-            if results[0].boxes is not None:
-                for box in results[0].boxes:
-                    x1, y1, x2, y2 = box.xyxy[0].tolist()
-                    width = x2 - x1
-                    height = y2 - y1
-                
-                    # Create rectangle (same style as YOLOv8)
-                    rect = patches.Rectangle(
-                        (x1, y1), width, height,
-                        linewidth=3, edgecolor='magenta', facecolor='none'
-                    )
-                    ax.add_patch(rect)
-                
-                    # Add label with confidence
-                    class_name = model.names[int(box.cls)]
-                    confidence = float(box.conf)
-                    ax.text(x1, y1-10, f'{class_name} {confidence:.2f}', 
-                            color='magenta', fontsize=12, weight='bold',
-                            bbox=dict(boxstyle="round,pad=0.3", facecolor="magenta", alpha=0.7))
-                
-                    # Store detection info
-                    detections.append({
-                        "class": class_name,
-                        "confidence": confidence,
-                    })
-        
-            ax.axis('off')
-            ax.set_xlim(0, image.width)
-            ax.set_ylim(image.height, 0)  # Flip Y axis to match image coordinates
-            plt.tight_layout()
-        
-            # Convert matplotlib figure to image
-            buf = BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='white')
-            buf.seek(0)
-            result_image = Image.open(buf)
-            plt.close()
+            # Extract detections and draw boxes manually
+                detections = []
+                if results[0].boxes is not None:
+                    for box in results[0].boxes:
+                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                        width = x2 - x1
+                        height = y2 - y1
+                    
+                        # Create rectangle (same style as YOLOv8)
+                        rect = patches.Rectangle(
+                            (x1, y1), width, height,
+                            linewidth=3, edgecolor='magenta', facecolor='none'
+                        )
+                        ax.add_patch(rect)
+                    
+                        # Add label with confidence
+                        class_name = model.names[int(box.cls)]
+                        confidence = float(box.conf)
+                        ax.text(x1, y1-10, f'{class_name} {confidence:.2f}', 
+                                color='magenta', fontsize=12, weight='bold',
+                                bbox=dict(boxstyle="round,pad=0.3", facecolor="magenta", alpha=0.7))
+                    
+                        # Store detection info
+                        detections.append({
+                            "class": class_name,
+                            "confidence": confidence,
+                        })
             
-            # Display result
-            st.image(result_image, caption='Detection Results', use_container_width=True)
-        
-            # Show detection info
-            if detections:
-                st.success(f"Found {len(detections)} objects!")
-                for i, detection in enumerate(detections, 1):
-                    st.write(f"**{i}.** {detection['class']} - {detection['confidence']*100:.1f}% confidence")
-            else:
-                st.info("No objects detected. Try lowering the confidence threshold.")
+                ax.axis('off')
+                ax.set_xlim(0, image.width)
+                ax.set_ylim(image.height, 0)  # Flip Y axis to match image coordinates
+                plt.tight_layout()
             
-            st.balloons()
+                # Convert matplotlib figure to image
+                buf = BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='white')
+                buf.seek(0)
+                result_image = Image.open(buf)
+                plt.close()
+                
+                # Display result
+                st.image(result_image, caption='Detection Results', use_container_width=True)
+            
+                # Show detection info
+                if detections:
+                    st.success(f"Found {len(detections)} objects!")
+                    for i, detection in enumerate(detections, 1):
+                        st.write(f"**{i}.** {detection['class']} - {detection['confidence']*100:.1f}% confidence")
+                else:
+                    st.info("No objects detected. Try lowering the confidence threshold.")
+                
+                st.balloons()
 
 # Instructions
 st.markdown("---")
