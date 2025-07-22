@@ -74,31 +74,61 @@ if uploaded_file is not None:
             with st.spinner('Analyzing image...'):
                 
                 if model_loaded and model is not None:
-                    # REAL DETECTION with your model
                     try:
+                        # Convert PIL to numpy array
+                        image_np = np.array(image)
+                        
                         # Run inference with confidence slider
-                        results = model(np.array(image), conf=confidence_threshold, verbose=False)
+                        results = model(image_np, conf=confidence_threshold, verbose=False)
                         
-                        # Get annotated image
-                        import cv2
-                        annotated_img = results[0].plot()
-                        annotated_img_rgb = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
-                        annotated_pil = Image.fromarray(annotated_img_rgb)
+                        # Create figure with original image (preserves colors)
+                        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+                        ax.imshow(image)  # Use original PIL image
                         
-                        # Display results
-                        st.image(annotated_pil, caption='Detection Results', use_container_width=True)
-                        
-                        # Extract and display detection info
+                        # Draw bounding boxes manually
                         detections = []
                         if results[0].boxes is not None:
                             for box in results[0].boxes:
-                                detection = {
-                                    "class": model.names[int(box.cls)],
-                                    "confidence": float(box.conf),
-                                    "bbox": box.xyxy[0].tolist()
-                                }
-                                detections.append(detection)
+                                # Get coordinates
+                                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                                width = x2 - x1
+                                height = y2 - y1
+                                
+                                # Draw rectangle (cyan color like YOLOv8)
+                                rect = patches.Rectangle(
+                                    (x1, y1), width, height,
+                                    linewidth=2, edgecolor='cyan', facecolor='none'
+                                )
+                                ax.add_patch(rect)
+                                
+                                # Add label
+                                class_name = model.names[int(box.cls)]
+                                confidence = float(box.conf)
+                                ax.text(x1, y1-5, f'{class_name} {confidence:.2f}', 
+                                        color='cyan', fontsize=10, weight='bold',
+                                        bbox=dict(boxstyle="round,pad=0.2", facecolor="cyan", alpha=0.7))
+                                
+                                detections.append({
+                                    "class": class_name,
+                                    "confidence": confidence,
+                                })
                         
+                        ax.axis('off')
+                        ax.set_xlim(0, image.width)
+                        ax.set_ylim(image.height, 0)
+                        plt.tight_layout()
+                        
+                        # Convert to image and display
+                        buf = BytesIO()
+                        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
+                        buf.seek(0)
+                        result_image = Image.open(buf)
+                        plt.close()
+                        
+                        # Display with correct colors
+                        st.image(result_image, caption='Detection Results', use_container_width=True)
+                        
+                        # Show detection info
                         if detections:
                             st.success(f"Found {len(detections)} objects!")
                             for i, detection in enumerate(detections, 1):
@@ -107,19 +137,11 @@ if uploaded_file is not None:
                             st.warning("No objects detected. Try lowering the confidence threshold.")
                         
                         st.balloons()
-                        
-                    except Exception as e:
-                        st.error(f"Detection failed: {str(e)}")
-                        st.write("Falling back to mock results...")
-                        # Fall back to mock results if real detection fails
-                        st.image(image, caption='Mock Results', use_container_width=True)
                 
-                else:
-                    # MOCK RESULTS (fallback)
-                    st.image(image, caption='Mock Results - Model Not Available', use_container_width=True)
-                    st.write("**Mock Detected Objects:**")
-                    st.write("1. **Flat Roof** - 95.0% confidence")
-                    st.write("2. **Solar Panel** - 87.0% confidence")
+            except Exception as e:
+                st.error(f"Detection failed: {str(e)}")
+        else:
+            st.error("Model not loaded - cannot run detection")
 
 # Instructions
 st.markdown("---")
