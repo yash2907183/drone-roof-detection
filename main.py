@@ -33,6 +33,17 @@ else:
     st.sidebar.error("❌ Model Loading Failed")
     st.sidebar.write("Using mock results for demo")
 
+# Add confidence slider
+st.sidebar.header("Detection Settings")
+confidence_threshold = st.sidebar.slider(
+    "Confidence Threshold", 
+    min_value=0.1, 
+    max_value=1.0, 
+    value=0.7,
+    step=0.05,
+    help="Higher = more accurate, Lower = more detections"
+)
+
 # File uploader
 uploaded_file = st.file_uploader(
     "Choose an aerial image...", 
@@ -41,14 +52,20 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-    # Display the uploaded image
+    # Load and process image
     image = Image.open(uploaded_file)
+    
+    # Convert RGBA to RGB if needed (fix the 4-channel issue)
+    if image.mode == 'RGBA':
+        image = image.convert('RGB')
+    elif image.mode != 'RGB':
+        image = image.convert('RGB')
     
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("Original Image")
-        st.image(image, caption='Uploaded Image', use_column_width=True)
+        st.image(image, caption='Uploaded Image', use_container_width=True)
     
     with col2:
         st.subheader("Detection Results")
@@ -59,8 +76,8 @@ if uploaded_file is not None:
                 if model_loaded and model is not None:
                     # REAL DETECTION with your model
                     try:
-                        # Run inference
-                        results = model(np.array(image), conf=0.5, verbose=False)
+                        # Run inference with confidence slider
+                        results = model(np.array(image), conf=confidence_threshold, verbose=False)
                         
                         # Get annotated image
                         import cv2
@@ -69,7 +86,7 @@ if uploaded_file is not None:
                         annotated_pil = Image.fromarray(annotated_img_rgb)
                         
                         # Display results
-                        st.image(annotated_pil, caption='Detection Results', use_column_width=True)
+                        st.image(annotated_pil, caption='Detection Results', use_container_width=True)
                         
                         # Extract and display detection info
                         detections = []
@@ -87,7 +104,7 @@ if uploaded_file is not None:
                             for i, detection in enumerate(detections, 1):
                                 st.write(f"**{i}.** {detection['class']} - {detection['confidence']*100:.1f}% confidence")
                         else:
-                            st.warning("No objects detected. Try adjusting the image or confidence threshold.")
+                            st.warning("No objects detected. Try lowering the confidence threshold.")
                         
                         st.balloons()
                         
@@ -95,11 +112,11 @@ if uploaded_file is not None:
                         st.error(f"Detection failed: {str(e)}")
                         st.write("Falling back to mock results...")
                         # Fall back to mock results if real detection fails
-                        st.image(image, caption='Mock Results', use_column_width=True)
+                        st.image(image, caption='Mock Results', use_container_width=True)
                 
                 else:
                     # MOCK RESULTS (fallback)
-                    st.image(image, caption='Mock Results - Model Not Available', use_column_width=True)
+                    st.image(image, caption='Mock Results - Model Not Available', use_container_width=True)
                     st.write("**Mock Detected Objects:**")
                     st.write("1. **Flat Roof** - 95.0% confidence")
                     st.write("2. **Solar Panel** - 87.0% confidence")
@@ -108,7 +125,8 @@ if uploaded_file is not None:
 st.markdown("---")
 st.markdown("### How to Use:")
 st.markdown("1. Upload an aerial or drone image")
-st.markdown("2. Click 'Detect Objects' to run inference") 
-st.markdown("3. View results with bounding boxes and confidence scores")
+st.markdown("2. Adjust confidence threshold in sidebar (try 0.7-0.8 for best results)")
+st.markdown("3. Click 'Detect Objects' to run inference") 
+st.markdown("4. View results with bounding boxes and confidence scores")
 
 st.markdown("*Powered by YOLOv8 & Streamlit*")
