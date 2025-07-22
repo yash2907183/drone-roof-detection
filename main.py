@@ -1,6 +1,9 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from io import BytesIO
 
 # Add model loading
 @st.cache_resource
@@ -72,7 +75,6 @@ if uploaded_file is not None:
         
         if st.button('🔍 Detect Objects', type="primary"):
             with st.spinner('Analyzing image...'):
-                
                 if model_loaded and model is not None:
                     try:
                         # Convert PIL to numpy array
@@ -137,11 +139,11 @@ if uploaded_file is not None:
                             st.warning("No objects detected. Try lowering the confidence threshold.")
                         
                         st.balloons()
-                
-            except Exception as e:
-                st.error(f"Detection failed: {str(e)}")
-        else:
-            st.error("Model not loaded - cannot run detection")
+                        
+                    except Exception as e:
+                        st.error(f"Detection failed: {str(e)}")
+                else:
+                    st.error("Model not loaded - cannot run detection")
 
 # Instructions
 st.markdown("---")
