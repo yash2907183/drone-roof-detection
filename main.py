@@ -19,7 +19,7 @@ def load_model():
 
 st.set_page_config(page_title="Drone Roof Detection", page_icon="🚁")
 
-st.title("🚁 Drone Roof & Solar Panel Detection")
+st.title(" Rooftop Type & Solar Panel Detection")
 st.write("Upload an aerial/drone image to detect different roof types and solar panels!")
 
 # Load model
